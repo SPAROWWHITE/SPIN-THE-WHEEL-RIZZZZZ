@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Rigged Spin the Wheel</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #1e1e2e;
+      color: #cdd6f4;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+      color: #f5e0dc;
+    }
+
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 30px;
+      justify-content: center;
+      align-items: flex-start;
+      margin-top: 20px;
+    }
+
+    .controls {
+      background: #313244;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      width: 280px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 120px;
+      background: #181825;
+      color: #a6adc8;
+      border: 1px solid #45475a;
+      border-radius: 8px;
+      padding: 10px;
+      box-sizing: border-box;
+      resize: vertical;
+      font-size: 14px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .btn-update {
+      background: #89b4fa;
+      color: #11111b;
+    }
+
+    .btn-spin {
+      background: #a6e3a1;
+      color: #11111b;
+      font-size: 18px;
+    }
+
+    .wheel-container {
+      position: relative;
+      width: 360px;
+      height: 360px;
+    }
+
+    /* Ticker Pointer at the top */
+    .pointer {
+      position: absolute;
+      top: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-top: 25px solid #f38ba8;
+      z-index: 10;
+    }
+
+    canvas {
+      border-radius: 50%;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    #result {
+      margin-top: 20px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #f9e2af;
+      height: 30px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Elimination Wheel</h1>
+
+  <div class="container">
+    <!-- Left side controls -->
+    <div class="controls">
+      <label for="namesInput"><b>Enter Names (one per line):</b></label>
+      <textarea id="namesInput">Harjot
+Mohit
+Rahul
+Amit
+Rohan</textarea>
+      <button class="btn-update" onclick="resetWheel()">Set Names</button>
+      <button class="btn-spin" id="spinBtn" onclick="spin()">SPIN!</button>
+    </div>
+
+    <!-- Right side canvas wheel -->
+    <div class="wheel-container">
+      <div class="pointer"></div>
+      <canvas id="wheel" width="360" height="360"></canvas>
+    </div>
+  </div>
+
+  <div id="result"></div>
+
+  <script>
+    // System secrets: names to protect until the end
+    const PROTECTED_NAMES = ["HARJOT", "MOHIT"];
+
+    const canvas = document.getElementById("wheel");
+    const ctx = canvas.getContext("2d");
+    let names = [];
+    let currentAngle = 0;
+    let isSpinning = false;
+
+    // Palette for wheel slices
+    const colors = ["#f38ba8", "#fab387", "#f9e2af", "#a6e3a1", "#89b4fa", "#cba6f7", "#74c7ec"];
+
+    function resetWheel() {
+      if (isSpinning) return;
+      const rawText = document.getElementById("namesInput").value;
+      names = rawText.split("\n").map(n => n.trim()).filter(n => n.length > 0);
+      document.getElementById("result").innerText = "";
+      drawWheel();
+    }
+
+    function drawWheel() {
+      const numSlices = names.length;
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const radius = centerX;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (numSlices === 0) return;
+
+      const sliceAngle = (2 * Math.PI) / numSlices;
+
+      for (let i = 0; i < numSlices; i++) {
+        const startAngle = currentAngle + i * sliceAngle;
+        const endAngle = startAngle + sliceAngle;
+
+        // Slice background
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.fill();
+        ctx.stroke();
+
+        // Text label
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(startAngle + sliceAngle / 2);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#11111b";
+        ctx.font = "bold 16px sans-serif";
+        ctx.fillText(names[i], radius - 20, 5);
+        ctx.restore();
+      }
+    }
+
+    function spin() {
+      if (isSpinning || names.length <= 1) return;
+      isSpinning = true;
+      document.getElementById("result").innerText = "Spinning...";
+
+      // 1. Rigged Selection Logic
+      let availableIndices = [];
+      
+      // Check if we still have unprotected targets to eliminate
+      const unprotectedIndices = names
+        .map((name, index) => ({ name: name.toUpperCase(), index }))
+        .filter(item => !PROTECTED_NAMES.includes(item.name))
+        .map(item => item.index);
+
+      if (unprotectedIndices.length > 0) {
+        // Force the wheel to hit one of the UNPROTECTED names
+        availableIndices = unprotectedIndices;
+      } else {
+        // Only Harjot and Mohit (or other protected names) remain -> Pick randomly between them
+        availableIndices = names.map((_, i) => i);
+      }
+
+      // Pick the predetermined target index
+      const targetIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+
+      // 2. Calculate final stopping angle
+      const numSlices = names.length;
+      const sliceAngle = (2 * Math.PI) / numSlices;
+
+      // Pointer is at the top (3 * Math.PI / 2 radians in standard canvas coords)
+      const pointerAngle = (3 * Math.PI) / 2;
+      
+      // Calculate target angle so targetIndex lands right under pointer
+      const targetSliceCenter = targetIndex * sliceAngle + sliceAngle / 2;
+      let desiredAngle = pointerAngle - targetSliceCenter;
+
+      // Add extra 5 full rotations for visual excitement
+      const fullSpins = 5 * 2 * Math.PI;
+      
+      // Determine where currentAngle is relative to 2PI
+      const baseAngle = currentAngle % (2 * Math.PI);
+      let targetRotation = currentAngle + fullSpins + (desiredAngle - baseAngle);
+
+      // Make sure target angle is strictly moving forward
+      if (targetRotation < currentAngle + fullSpins) {
+        targetRotation += 2 * Math.PI;
+      }
+
+      // 3. Animation execution
+      const startTime = performance.now();
+      const duration = 4000; // 4 seconds spin duration
+
+      function animate(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        // Ease-out cubic formula for smooth deceleration
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        
+        currentAngle = currentAngle + (targetRotation - currentAngle) * (easeOut * 0.05);
+        drawWheel();
+
+        if (progress < 1 && Math.abs(targetRotation - currentAngle) > 0.001) {
+          requestAnimationFrame(animate);
+        } else {
+          currentAngle = targetRotation;
+          drawWheel();
+          isSpinning = false;
+          
+          // Eliminate the selected victim
+          const eliminatedName = names[targetIndex];
+          names.splice(targetIndex, 1);
+
+          document.getElementById("result").innerText = `${eliminatedName} was eliminated!`;
+
+          // Redraw after 1.5s delay so players see the updated wheel without the eliminated name
+          setTimeout(() => {
+            drawWheel();
+            if (names.length === 2) {
+              document.getElementById("result").innerText = `FINAL TWO: ${names.join(" vs ")}!`;
+            }
+          }, 1500);
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    // Initial load
+    resetWheel();
+  </script>
+</body>
+</html>
