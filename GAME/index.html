@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Rigged Spin the Wheel</title>
+  <title>Elimination Wheel</title>
+
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -84,7 +85,7 @@
       height: 360px;
     }
 
-    /* Ticker Pointer at the top */
+    /* Pointer at the top */
     .pointer {
       position: absolute;
       top: -15px;
@@ -108,185 +109,532 @@
       font-size: 20px;
       font-weight: bold;
       color: #f9e2af;
-      height: 30px;
+      min-height: 30px;
       text-align: center;
     }
   </style>
 </head>
+
 <body>
 
   <h1>Elimination Wheel</h1>
 
   <div class="container">
-    <!-- Left side controls -->
+
+    <!-- Controls -->
     <div class="controls">
-      <label for="namesInput"><b>Enter Names (one per line):</b></label>
+
+      <label for="namesInput">
+        <b>Enter Names (one per line):</b>
+      </label>
+
       <textarea id="namesInput">Harjot
 Mohit
 Rahul
 Amit
-Rohan</textarea>
-      <button class="btn-update" onclick="resetWheel()">Set Names</button>
-      <button class="btn-spin" id="spinBtn" onclick="spin()">SPIN!</button>
+Rohan
+Taman
+Gulshan</textarea>
+
+      <button class="btn-update" onclick="resetWheel()">
+        Set Names
+      </button>
+
+      <button class="btn-spin" id="spinBtn" onclick="spin()">
+        SPIN!
+      </button>
+
     </div>
 
-    <!-- Right side canvas wheel -->
+    <!-- Wheel -->
     <div class="wheel-container">
+
       <div class="pointer"></div>
+
       <canvas id="wheel" width="360" height="360"></canvas>
+
     </div>
+
   </div>
 
   <div id="result"></div>
 
+
   <script>
-    // System secrets: names to protect until the end
-    const PROTECTED_NAMES = ["HARJOT", "MOHIT"];
+
+    /*
+      ==========================================
+      PROTECTED NAMES
+      ==========================================
+
+      These two names will NOT be eliminated
+      while other names are still available.
+
+      They will remain until the FINAL TWO.
+    */
+
+    const PROTECTED_NAMES = [
+      "TAMAN",
+      "GULSHAN"
+    ];
+
 
     const canvas = document.getElementById("wheel");
     const ctx = canvas.getContext("2d");
+
     let names = [];
     let currentAngle = 0;
     let isSpinning = false;
 
-    // Palette for wheel slices
-    const colors = ["#f38ba8", "#fab387", "#f9e2af", "#a6e3a1", "#89b4fa", "#cba6f7", "#74c7ec"];
+
+    // Wheel colors
+    const colors = [
+      "#f38ba8",
+      "#fab387",
+      "#f9e2af",
+      "#a6e3a1",
+      "#89b4fa",
+      "#cba6f7",
+      "#74c7ec"
+    ];
+
+
+    /*
+      ==========================================
+      SET NAMES
+      ==========================================
+    */
 
     function resetWheel() {
+
       if (isSpinning) return;
-      const rawText = document.getElementById("namesInput").value;
-      names = rawText.split("\n").map(n => n.trim()).filter(n => n.length > 0);
+
+      const rawText =
+        document.getElementById("namesInput").value;
+
+      names = rawText
+        .split("\n")
+        .map(name => name.trim())
+        .filter(name => name.length > 0);
+
+      currentAngle = 0;
+
       document.getElementById("result").innerText = "";
+
       drawWheel();
     }
 
+
+    /*
+      ==========================================
+      DRAW WHEEL
+      ==========================================
+    */
+
     function drawWheel() {
+
       const numSlices = names.length;
+
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
+
       const radius = centerX;
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
 
       if (numSlices === 0) return;
 
-      const sliceAngle = (2 * Math.PI) / numSlices;
+
+      const sliceAngle =
+        (2 * Math.PI) / numSlices;
+
 
       for (let i = 0; i < numSlices; i++) {
-        const startAngle = currentAngle + i * sliceAngle;
-        const endAngle = startAngle + sliceAngle;
 
-        // Slice background
+        const startAngle =
+          currentAngle + i * sliceAngle;
+
+        const endAngle =
+          startAngle + sliceAngle;
+
+
+        // Draw slice
         ctx.beginPath();
-        ctx.moveTo(centerX, centerY);
-        ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+
+        ctx.moveTo(
+          centerX,
+          centerY
+        );
+
+        ctx.arc(
+          centerX,
+          centerY,
+          radius,
+          startAngle,
+          endAngle
+        );
+
         ctx.closePath();
-        ctx.fillStyle = colors[i % colors.length];
+
+        ctx.fillStyle =
+          colors[i % colors.length];
+
         ctx.fill();
+
+        ctx.strokeStyle = "#11111b";
+        ctx.lineWidth = 1;
+
         ctx.stroke();
 
-        // Text label
+
+        // Draw name
         ctx.save();
-        ctx.translate(centerX, centerY);
-        ctx.rotate(startAngle + sliceAngle / 2);
+
+        ctx.translate(
+          centerX,
+          centerY
+        );
+
+        ctx.rotate(
+          startAngle + sliceAngle / 2
+        );
+
         ctx.textAlign = "right";
+
         ctx.fillStyle = "#11111b";
-        ctx.font = "bold 16px sans-serif";
-        ctx.fillText(names[i], radius - 20, 5);
+
+        ctx.font =
+          "bold 16px sans-serif";
+
+        ctx.fillText(
+          names[i],
+          radius - 20,
+          5
+        );
+
         ctx.restore();
       }
     }
 
-    function spin() {
-      if (isSpinning || names.length <= 1) return;
-      isSpinning = true;
-      document.getElementById("result").innerText = "Spinning...";
 
-      // 1. Rigged Selection Logic
-      let availableIndices = [];
-      
-      // Check if we still have unprotected targets to eliminate
+    /*
+      ==========================================
+      SPIN
+      ==========================================
+    */
+
+    function spin() {
+
+      if (
+        isSpinning ||
+        names.length <= 1
+      ) {
+        return;
+      }
+
+
+      isSpinning = true;
+
+      document.getElementById("result").innerText =
+        "Spinning...";
+
+
+      /*
+        ========================================
+        FIND NON-PROTECTED NAMES
+        ========================================
+      */
+
       const unprotectedIndices = names
-        .map((name, index) => ({ name: name.toUpperCase(), index }))
-        .filter(item => !PROTECTED_NAMES.includes(item.name))
+        .map((name, index) => ({
+          name: name.toUpperCase(),
+          index: index
+        }))
+        .filter(item =>
+          !PROTECTED_NAMES.includes(item.name)
+        )
         .map(item => item.index);
 
+
+      let availableIndices;
+
+
+      /*
+        ========================================
+        ELIMINATION RULE
+
+        If there are still other names:
+
+        eliminate ONLY those names.
+
+        Taman + Gulshan stay safe.
+        ========================================
+      */
+
       if (unprotectedIndices.length > 0) {
-        // Force the wheel to hit one of the UNPROTECTED names
-        availableIndices = unprotectedIndices;
+
+        availableIndices =
+          unprotectedIndices;
+
       } else {
-        // Only Harjot and Mohit (or other protected names) remain -> Pick randomly between them
-        availableIndices = names.map((_, i) => i);
+
+        /*
+          Only Taman and Gulshan remain.
+
+          Now choose randomly between them.
+        */
+
+        availableIndices =
+          names.map((_, index) => index);
       }
 
-      // Pick the predetermined target index
-      const targetIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
 
-      // 2. Calculate final stopping angle
-      const numSlices = names.length;
-      const sliceAngle = (2 * Math.PI) / numSlices;
+      /*
+        ========================================
+        RANDOM TARGET
+        ========================================
+      */
 
-      // Pointer is at the top (3 * Math.PI / 2 radians in standard canvas coords)
-      const pointerAngle = (3 * Math.PI) / 2;
-      
-      // Calculate target angle so targetIndex lands right under pointer
-      const targetSliceCenter = targetIndex * sliceAngle + sliceAngle / 2;
-      let desiredAngle = pointerAngle - targetSliceCenter;
+      const targetIndex =
+        availableIndices[
+          Math.floor(
+            Math.random() *
+            availableIndices.length
+          )
+        ];
 
-      // Add extra 5 full rotations for visual excitement
-      const fullSpins = 5 * 2 * Math.PI;
-      
-      // Determine where currentAngle is relative to 2PI
-      const baseAngle = currentAngle % (2 * Math.PI);
-      let targetRotation = currentAngle + fullSpins + (desiredAngle - baseAngle);
 
-      // Make sure target angle is strictly moving forward
-      if (targetRotation < currentAngle + fullSpins) {
-        targetRotation += 2 * Math.PI;
+      /*
+        ========================================
+        CALCULATE ROTATION
+        ========================================
+      */
+
+      const numSlices =
+        names.length;
+
+      const sliceAngle =
+        (2 * Math.PI) / numSlices;
+
+
+      // Pointer is at the top
+      const pointerAngle =
+        3 * Math.PI / 2;
+
+
+      // Center of selected slice
+      const targetSliceCenter =
+        targetIndex * sliceAngle +
+        sliceAngle / 2;
+
+
+      let desiredAngle =
+        pointerAngle -
+        targetSliceCenter;
+
+
+      /*
+        Add 5 full rotations
+        for a proper spin animation.
+      */
+
+      const fullSpins =
+        5 * 2 * Math.PI;
+
+
+      const baseAngle =
+        currentAngle %
+        (2 * Math.PI);
+
+
+      let targetRotation =
+        currentAngle +
+        fullSpins +
+        (desiredAngle - baseAngle);
+
+
+      /*
+        Make sure wheel always
+        rotates forward.
+      */
+
+      if (
+        targetRotation <
+        currentAngle + fullSpins
+      ) {
+
+        targetRotation +=
+          2 * Math.PI;
       }
 
-      // 3. Animation execution
-      const startTime = performance.now();
-      const duration = 4000; // 4 seconds spin duration
+
+      /*
+        ========================================
+        ANIMATION
+        ========================================
+      */
+
+      const startTime =
+        performance.now();
+
+      const duration =
+        4000;
+
 
       function animate(now) {
-        const elapsed = now - startTime;
-        const progress = Math.min(elapsed / duration, 1);
 
-        // Ease-out cubic formula for smooth deceleration
-        const easeOut = 1 - Math.pow(1 - progress, 3);
-        
-        currentAngle = currentAngle + (targetRotation - currentAngle) * (easeOut * 0.05);
+        const elapsed =
+          now - startTime;
+
+
+        const progress =
+          Math.min(
+            elapsed / duration,
+            1
+          );
+
+
+        /*
+          Ease-out cubic
+        */
+
+        const easeOut =
+          1 -
+          Math.pow(
+            1 - progress,
+            3
+          );
+
+
+        currentAngle =
+          currentAngle +
+          (
+            targetRotation -
+            currentAngle
+          ) * (easeOut * 0.05);
+
+
         drawWheel();
 
-        if (progress < 1 && Math.abs(targetRotation - currentAngle) > 0.001) {
-          requestAnimationFrame(animate);
+
+        if (
+          progress < 1 &&
+          Math.abs(
+            targetRotation -
+            currentAngle
+          ) > 0.001
+        ) {
+
+          requestAnimationFrame(
+            animate
+          );
+
         } else {
-          currentAngle = targetRotation;
+
+          /*
+            ==================================
+            SPIN FINISHED
+            ==================================
+          */
+
+          currentAngle =
+            targetRotation;
+
           drawWheel();
+
           isSpinning = false;
-          
-          // Eliminate the selected victim
-          const eliminatedName = names[targetIndex];
-          names.splice(targetIndex, 1);
 
-          document.getElementById("result").innerText = `${eliminatedName} was eliminated!`;
 
-          // Redraw after 1.5s delay so players see the updated wheel without the eliminated name
+          /*
+            Get eliminated name
+          */
+
+          const eliminatedName =
+            names[targetIndex];
+
+
+          /*
+            Remove name
+          */
+
+          names.splice(
+            targetIndex,
+            1
+          );
+
+
+          /*
+            Show result
+          */
+
+          document.getElementById(
+            "result"
+          ).innerText =
+            `${eliminatedName} was eliminated!`;
+
+
+          /*
+            ==================================
+            FINAL TWO
+            ==================================
+          */
+
           setTimeout(() => {
+
             drawWheel();
+
+
             if (names.length === 2) {
-              document.getElementById("result").innerText = `FINAL TWO: ${names.join(" vs ")}!`;
+
+              document.getElementById(
+                "result"
+              ).innerText =
+                `FINAL TWO: ${names.join(" vs ")}!`;
+
             }
+
+
+            /*
+              ==================================
+              WINNER
+              ==================================
+            */
+
+            if (names.length === 1) {
+
+              document.getElementById(
+                "result"
+              ).innerText =
+                `🏆 WINNER: ${names[0]}!`;
+
+            }
+
           }, 1500);
         }
       }
 
-      requestAnimationFrame(animate);
+
+      requestAnimationFrame(
+        animate
+      );
     }
 
-    // Initial load
+
+    /*
+      ==========================================
+      INITIAL LOAD
+      ==========================================
+    */
+
     resetWheel();
+
   </script>
+
 </body>
 </html>
